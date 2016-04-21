@@ -7,18 +7,29 @@
   </head>
   <body class="mixpanel-platform-body">
   <script id='query'>
-    function getProperty(event) {
-      return event.properties[params.property];
-    }
-
     function main() {
-        return Events({
-            from_date: params.from_date,
-            to_date: params.to_date,
-        })
-       .filter(function(event) {return event.name == params.event;})
-       .groupBy([getProperty], mixpanel.reducer.count());
-    }
+      return Events({
+        from_date: params.from_date,
+        to_date: params.to_date,
+        event_selectors: [{event: "Viewed docs"}, {event: "Blog - Post Viewed"}, {event: "Help Center"}, {event: "Landing- Education Videos"}]
+      })
+      .filter(function(event) {
+      if(event.properties.$email === undefined || event.properties.$email.indexOf("@mixpanel.com") > -1) {
+        if(event.name == "Blog - Post Viewed") {
+          if(event.properties.title !== undefined && event.properties.title.indexOf("Community Tip") > -1) {
+            return event;
+          }
+        } else if(event.name == "Help Center") {
+          if(event.properties.page !== undefined && event.properties.page != "/help/questions") {
+            return event;
+          }
+        } else {
+          return event;
+        }
+      }
+    })
+    .groupBy(["properties.$current_url"], mixpanel.reducer.count());
+  }
   </script>
   Date: <br>
   <div id="dateSelect"></div>
@@ -30,24 +41,18 @@
   <script>
   var script = document.getElementById('query').innerHTML;
   var dateSelect = $('#dateSelect').MPDatepicker();
-  var eventSelect = $('#events').MPEventSelect();
-  var propSelect = $('#properties').MPPropertySelect();
-  propSelect.MPPropertySelect('setEvent');
   var eventTable = $('#table').MPTable({showPercentages: false, firstColHeader: 'Frequency'});
   function runQuery() {
     var params = {
       'from_date': dateSelect.MPDatepicker('value').from.toISOString().slice(0, -14),
       'to_date': dateSelect.MPDatepicker('value').to.toISOString().slice(0, -14),
-      'event': eventSelect.MPEventSelect('value'),
-      'property': propSelect.MPPropertySelect('value')
     };
     MP.api.custom_query(script, params).done(function(results) {
-      var res = _.chain(results).map(function(item) {var obj = {}; obj.Property = item.key[0]? item.key[0]: 'No Property'; obj.Count = item.value; return obj;}).sortBy(item => -1 * item.Count).value();res.unshift(''); delete res[0];
+      //var res = _.chain(results).map(function(item) {var obj = {}; obj.Property = item.key[0]? item.key[0]: 'No Property'; obj.Count = item.value; return obj;}).sortBy(item => -1 * item.Count).value();res.unshift(''); delete res[0];
       eventTable.MPTable('setData', res);
     });
   }
-  eventSelect.on('change', function() {runQuery();});
-  propSelect.on('change', function() {runQuery();});
+  dateSelect.on('change', function() {runQuery();});
   </script>
   </body>
 </html>
