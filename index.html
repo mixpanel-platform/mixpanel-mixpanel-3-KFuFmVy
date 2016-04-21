@@ -1,4 +1,3 @@
-<!DOCTYPE html>
 <html>
   <head>
     <meta charset="utf-8">
@@ -7,9 +6,48 @@
     <script src="https://cdn.mxpnl.com/libs/mixpanel-platform/build/mixpanel-platform.v0.latest.min.js"></script>
   </head>
   <body class="mixpanel-platform-body">
-    <h1>Hello, World!</h1>
-    <script>
-      // Run queries and display results here
-    </script>
+  <script id='query'>
+    function getProperty(event) {
+      return event.properties[params.property];
+    }
+
+    function main() {
+        return Events({
+            from_date: params.from_date,
+            to_date: params.to_date,
+        })
+       .filter(function(event) {return event.name == params.event;})
+       .groupBy([getProperty], mixpanel.reducer.count());
+    }
+  </script>
+  Date: <br>
+  <div id="dateSelect"></div>
+  Event: <br>
+  <div id='events'></div>
+  Property <br>
+  <div id='properties'></div>
+  <div id="table" style='width:943px'></div><br>
+  <script>
+  var script = document.getElementById('query').innerHTML;
+  var dateSelect = $('#dateSelect').MPDatepicker();
+  var eventSelect = $('#events').MPEventSelect();
+  var propSelect = $('#properties').MPPropertySelect();
+  propSelect.MPPropertySelect('setEvent');
+  var eventTable = $('#table').MPTable({showPercentages: false, firstColHeader: 'Frequency'});
+  function runQuery() {
+    var params = {
+      'from_date': dateSelect.MPDatepicker('value').from.toISOString().slice(0, -14),
+      'to_date': dateSelect.MPDatepicker('value').to.toISOString().slice(0, -14),
+      'event': eventSelect.MPEventSelect('value'),
+      'property': propSelect.MPPropertySelect('value')
+    };
+    MP.api.custom_query(script, params).done(function(results) {
+      var res = _.chain(results).map(function(item) {var obj = {}; obj.Property = item.key[0]? item.key[0]: 'No Property'; obj.Count = item.value; return obj;}).sortBy(item => -1 * item.Count).value();res.unshift(''); delete res[0];
+      eventTable.MPTable('setData', res);
+    });
+  }
+  eventSelect.on('change', function() {runQuery();});
+  propSelect.on('change', function() {runQuery();});
+  </script>
   </body>
 </html>
