@@ -6,7 +6,7 @@
     <script src="https://cdn.mxpnl.com/libs/mixpanel-platform/build/mixpanel-platform.v0.latest.min.js"></script>
   </head>
   <body class="mixpanel-platform-body">
-  <script id='query'>
+  <script id='query_one'>
     function main() {
       return Events({
         from_date: params.from_date,
@@ -14,28 +14,34 @@
         event_selectors: [{event: "Viewed docs"}, {event: "Blog - Post Viewed"}, {event: "Help Center"}, {event: "Landing- Education Videos"}]
       })
       .filter(function(event) {
-      if(event.properties.$email === undefined || event.properties.$email.indexOf("@mixpanel.com") > -1) {
-        if(event.name == "Blog - Post Viewed") {
-          if(event.properties.title !== undefined && event.properties.title.indexOf("Community Tip") > -1) {
-            return event;
-          }
-        } else if(event.name == "Help Center") {
-          if(event.properties.page !== undefined && event.properties.page != "/help/questions") {
-            return event;
-          }
-        } else {
+      if(event.name == "Blog - Post Viewed") {
+        if(event.properties.title !== undefined && event.properties.title.indexOf("Community Tip") > -1) {
           return event;
         }
+      } else if(event.name == "Help Center") {
+        if(event.properties.page !== undefined && event.properties.page != "/help/questions") {
+          return event;
+        }
+      } else {
+        return event;
       }
     })
-    .groupBy(["properties.$current_url"], mixpanel.reducer.count());
+    .groupByUser(['properties.$current_url', 'properties.Email'], mixpanel.reducer.count());
+  }
+  </script>
+  <script id='query_two'>
+    function main() {
+      return People()
+      .filter(function(user) { return user.properties.$email !== undefined && user.properties['Account Status'] == 'Paying' })
+      .groupByUser(['properties.$email'], mixpanel.reducer.count());
   }
   </script>
   Date: <br>
   <div id="dateSelect"></div>
   <div id="table" style='width:943px'></div><br>
   <script>
-  var script = document.getElementById('query').innerHTML;
+  var script_one = document.getElementById('query_one').innerHTML;
+  var script_two = document.getElementById('query_two').innerHTML;
   var dateSelect = $('#dateSelect').MPDatepicker();
   var eventTable = $('#table').MPTable({showPercentages: false, firstColHeader: 'Frequency'});
   function runQuery() {
@@ -43,9 +49,55 @@
       'from_date': dateSelect.MPDatepicker('value').from.toISOString().slice(0, -14),
       'to_date': dateSelect.MPDatepicker('value').to.toISOString().slice(0, -14),
     };
-    MP.api.custom_query(script, params).done(function(results) {
-      //var res = _.chain(results).map(function(item) {var obj = {}; obj.Property = item.key[0]? item.key[0]: 'No Property'; obj.Count = item.value; return obj;}).sortBy(item => -1 * item.Count).value();res.unshift(''); delete res[0];
-      eventTable.MPTable('setData', res);
+    MP.api.custom_query(script_one, params).done(function(results) {
+      MP.api.custom_query(script_two, {}).done(function(users) {
+        var domains = [];
+        console.log(results);
+        console.log(users);
+        _.each(users, function(item){
+          if(item.key[1] !== undefined) {
+            domains.push(item.key[1].split("@")[1]);
+          }
+        });
+        console.log(domains);
+        var res = {}; var toSort = []; var sorted = []; var final = {};
+        _.each(results, function(item) {
+          if(res[item.key[1]] === undefined) {
+            res[item.key[1]] = {'Document URL': item.key[1], 'Total Views': item.value, 'Unique Views': 1};
+            if(item.key[2] !== null && domains.indexOf(item.key[2].split("@")[1]) > -1 && item.key[2].split("@")[1] != "mixpanel.com") {
+              res[item.key[1]]['Internal Views'] = 0;
+              res[item.key[1]]['Paid Views'] = item.value;
+              res[item.key[1]]['Free Views'] = 0;
+            } else if (item.key[2] !== null && item.key[2].split("@")[1] == "mixpanel.com") {
+              res[item.key[1]]['Internal Views'] = item.value;
+              res[item.key[1]]['Paid Views'] = 0;
+              res[item.key[1]]['Free Views'] = 0;
+            } else {
+              res[item.key[1]]['Internal Views'] = 0;
+              res[item.key[1]]['Paid Views'] = 0;
+              res[item.key[1]]['Free Views'] = item.value;
+            }
+          } else {
+            res[item.key[1]]['Total Views'] += item.value;
+            res[item.key[1]]['Unique Views'] += 1;
+            if(item.key[2] !== null && domains.indexOf(item.key[2].split("@")[1]) > -1  && item.key[2].split("@")[1] != "mixpanel.com") {
+              res[item.key[1]]['Paid Views'] += item.value;
+            } else if (item.key[2] !== null && item.key[2].split("@")[1] == "mixpanel.com") {
+              res[item.key[1]]['Internal Views'] += item.value;
+            } else {
+              res[item.key[1]]['Free Views'] += item.value;
+            }
+          }
+        });
+        for (var key in res) {
+          toSort.push({key:key,total:res[key]['Total Views']});
+        }
+        var sorted = _.sortBy( toSort, 'total' ).reverse();
+        for (var i=1; i<sorted.length; i++) {
+          final[i] = res[sorted[i-1].key];
+        }
+        eventTable.MPTable('setData', final);
+      });
     });
   }
   dateSelect.on('change', function() {runQuery();});
