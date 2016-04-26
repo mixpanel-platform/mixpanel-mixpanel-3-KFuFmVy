@@ -79,7 +79,7 @@
               }
               if(item.key[5] !== undefined && item.key[5] !== null && "help/questions/search".indexOf(item.key[5]) > -1) {
                 res[item.key[1]]['Via MP Search'] = 1;
-              } else if(item.key[5] !== undefined && item.key[5] !== null && "google".indexOf(item.key[5]) > -1 || "bing".indexOf(item.key[5]) > -1 || "yahoo".indexOf(item.key[5]) > -1 || "baidu".indexOf(item.key[5]) > -1 ||) {
+              } else if(item.key[5] !== undefined && item.key[5] !== null && "google".indexOf(item.key[5]) > -1 || "bing".indexOf(item.key[5]) > -1 || "yahoo".indexOf(item.key[5]) > -1 || "baidu".indexOf(item.key[5]) > -1 ) {
                 res[item.key[1]]['Via Search'] = 1;
               }
             } else {
@@ -97,9 +97,9 @@
                 res[item.key[1]]['Free Views'] += item.value;
               }
               if(item.key[5] !== undefined && item.key[5] !== null && "help/questions/search".indexOf(item.key[5]) > -1) {
-                res[item.key[1]]['Via MP Search'] = 1;
-              } else if(item.key[5] !== undefined && item.key[5] !== null && "google".indexOf(item.key[5]) > -1 || "bing".indexOf(item.key[5]) > -1 || "yahoo".indexOf(item.key[5]) > -1 || "baidu".indexOf(item.key[5]) > -1 ||) {
-                res[item.key[1]]['Via Search'] = 1;
+                res[item.key[1]]['Via MP Search'] += 1;
+              } else if(item.key[5] !== undefined && item.key[5] !== null && "google".indexOf(item.key[5]) > -1 || "bing".indexOf(item.key[5]) > -1 || "yahoo".indexOf(item.key[5]) > -1 || "baidu".indexOf(item.key[5]) > -1 ) {
+                res[item.key[1]]['Via Search'] += 1;
               }
             } else {
               if(item.key[4] == 'yes') { 
