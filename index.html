@@ -11,7 +11,7 @@
       return Events({
         from_date: params.from_date,
         to_date: params.to_date,
-        event_selectors: [{event: "Viewed docs"}, {event: "Blog - Post Viewed"}, {event: "Help Center"}, {event: "Landing- Education Videos"}]
+        event_selectors: [{event: "Viewed docs"}, {event: "Blog - Post Viewed"}, {event: "Help Center"}, {event: "Landing- Education Videos"}, {event: "Docs - vote"}}]
       })
       .filter(function(event) {
       if(event.name == "Blog - Post Viewed") {
@@ -26,7 +26,7 @@
         return event;
       }
     })
-    .groupByUser(['properties.$current_url', 'properties.Email'], mixpanel.reducer.count());
+    .groupByUser(['properties.$current_url', 'properties.Email', 'name', 'properties.helpful'], mixpanel.reducer.count());
   }
   </script>
   <script id='query_two'>
@@ -49,8 +49,8 @@
       'from_date': dateSelect.MPDatepicker('value').from.toISOString().slice(0, -14),
       'to_date': dateSelect.MPDatepicker('value').to.toISOString().slice(0, -14),
     };
-    MP.api.custom_query(script_one, params).done(function(results) {
-      MP.api.custom_query(script_two, {}).done(function(users) {
+    MP.api.jql(script_one, params).done(function(results) {
+      MP.api.jql(script_two, {}).done(function(users) {
         var domains = [];
         console.log(results);
         console.log(users);
@@ -59,33 +59,44 @@
             domains.push(item.key[1].split("@")[1]);
           }
         });
-        console.log(domains);
         var res = {}; var toSort = []; var sorted = []; var final = {};
         _.each(results, function(item) {
           if(res[item.key[1]] === undefined) {
-            res[item.key[1]] = {'Document URL': item.key[1], 'Total Views': item.value, 'Unique Views': 1};
-            if(item.key[2] !== null && domains.indexOf(item.key[2].split("@")[1]) > -1 && item.key[2].split("@")[1] != "mixpanel.com") {
-              res[item.key[1]]['Internal Views'] = 0;
-              res[item.key[1]]['Paid Views'] = item.value;
-              res[item.key[1]]['Free Views'] = 0;
-            } else if (item.key[2] !== null && item.key[2].split("@")[1] == "mixpanel.com") {
-              res[item.key[1]]['Internal Views'] = item.value;
-              res[item.key[1]]['Paid Views'] = 0;
-              res[item.key[1]]['Free Views'] = 0;
+            if(item.key[3] != 'Docs - vote') {
+              res[item.key[1]] = {'Document URL': item.key[1], 'Total Views': item.value, 'Unique Views': 1, 'Internal Views': 0, 'Paid Views': 0, 'Free Views': 0, 'Helpful': 0, 'Not Helpful': 0};
+              if(item.key[2] !== null && domains.indexOf(item.key[2].split("@")[1]) > -1 && item.key[2].split("@")[1] != "mixpanel.com") {
+                res[item.key[1]]['Internal Views'] = 0;
+                res[item.key[1]]['Paid Views'] = item.value;
+                res[item.key[1]]['Free Views'] = 0;
+              } else if (item.key[2] !== null && item.key[2].split("@")[1] == "mixpanel.com") {
+                res[item.key[1]]['Internal Views'] = item.value;
+                res[item.key[1]]['Paid Views'] = 0;
+                res[item.key[1]]['Free Views'] = 0;
+              } else {
+                res[item.key[1]]['Internal Views'] = 0;
+                res[item.key[1]]['Paid Views'] = 0;
+                res[item.key[1]]['Free Views'] = item.value;
+              }
             } else {
-              res[item.key[1]]['Internal Views'] = 0;
-              res[item.key[1]]['Paid Views'] = 0;
-              res[item.key[1]]['Free Views'] = item.value;
+                res[item.key[1]] = {'Document URL': item.key[1], 'Total Views': item.value, 'Unique Views': 1, 'Internal Views': 0, 'Paid Views': 0, 'Free Views': 0, 'Helpful': if(item.key[4] == 'yes') { 1 } else { 0 }, 'Not Helpful': if(item.key[4] == 'no') { 1 } else { 0 }};
             }
           } else {
-            res[item.key[1]]['Total Views'] += item.value;
-            res[item.key[1]]['Unique Views'] += 1;
-            if(item.key[2] !== null && domains.indexOf(item.key[2].split("@")[1]) > -1  && item.key[2].split("@")[1] != "mixpanel.com") {
-              res[item.key[1]]['Paid Views'] += item.value;
-            } else if (item.key[2] !== null && item.key[2].split("@")[1] == "mixpanel.com") {
-              res[item.key[1]]['Internal Views'] += item.value;
-            } else {
-              res[item.key[1]]['Free Views'] += item.value;
+            if(item.key[3] != 'Docs - vote')
+              res[item.key[1]]['Total Views'] += item.value;
+              res[item.key[1]]['Unique Views'] += 1;
+              if(item.key[2] !== null && domains.indexOf(item.key[2].split("@")[1]) > -1  && item.key[2].split("@")[1] != "mixpanel.com") {
+                res[item.key[1]]['Paid Views'] += item.value;
+              } else if (item.key[2] !== null && item.key[2].split("@")[1] == "mixpanel.com") {
+                res[item.key[1]]['Internal Views'] += item.value;
+              } else {
+                res[item.key[1]]['Free Views'] += item.value;
+              }
+            else {
+              if(item.key[4] == 'yes') { 
+                res[item.key[1]]['Helpful'] += 1;
+              } else if(item.key[4] == 'no') {
+                res[item.key[1]]['Not Helpful'] += 1;
+              }
             }
           }
         });
