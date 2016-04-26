@@ -52,8 +52,8 @@
     MP.api.jql(script_one, params).done(function(results) {
       MP.api.jql(script_two, {}).done(function(users) {
         var domains = [];
-        console.log(results);
-        console.log(users);
+        //console.log(results);
+        //console.log(users);
         _.each(users, function(item){
           if(item.key[1] !== undefined) {
             domains.push(item.key[1].split("@")[1]);
