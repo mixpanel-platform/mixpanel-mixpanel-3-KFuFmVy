@@ -81,7 +81,7 @@
                 res[item.key[1]] = {'Document URL': item.key[1], 'Total Views': item.value, 'Unique Views': 1, 'Internal Views': 0, 'Paid Views': 0, 'Free Views': 0, 'Helpful': if(item.key[4] == 'yes') { 1 } else { 0 }, 'Not Helpful': if(item.key[4] == 'no') { 1 } else { 0 }};
             }
           } else {
-            if(item.key[3] != 'Docs - vote')
+            if(item.key[3] != 'Docs - vote') {
               res[item.key[1]]['Total Views'] += item.value;
               res[item.key[1]]['Unique Views'] += 1;
               if(item.key[2] !== null && domains.indexOf(item.key[2].split("@")[1]) > -1  && item.key[2].split("@")[1] != "mixpanel.com") {
@@ -91,7 +91,7 @@
               } else {
                 res[item.key[1]]['Free Views'] += item.value;
               }
-            else {
+            } else {
               if(item.key[4] == 'yes') { 
                 res[item.key[1]]['Helpful'] += 1;
               } else if(item.key[4] == 'no') {
